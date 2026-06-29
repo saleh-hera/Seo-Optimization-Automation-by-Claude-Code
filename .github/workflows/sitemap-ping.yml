@@ -1,0 +1,22 @@
+name: Ping Google & Bing After Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ping-search-engines:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Google
+        run: |
+          curl -s "https://www.google.com/ping?sitemap=https://aiagentsvault.tech/sitemap.xml"
+          echo "✅ Google pinged"
+
+      - name: Ping Bing
+        run: |
+          curl -s "https://www.bing.com/ping?sitemap=https://aiagentsvault.tech/sitemap.xml"
+          echo "✅ Bing pinged"
+
+      - name: Log result
+        run: echo "Search engines notified of sitemap update at $(date)"

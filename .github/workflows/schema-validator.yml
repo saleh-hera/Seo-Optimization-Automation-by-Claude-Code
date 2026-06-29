@@ -1,0 +1,66 @@
+name: Schema & SEO Validator
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # Every Sunday midnight — weekly deep check
+
+jobs:
+  validate-seo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check meta description on homepage
+        run: |
+          PAGE=$(curl -s -L https://aiagentsvault.tech)
+          if echo "$PAGE" | grep -q 'meta name="description"'; then
+            echo "✅ Meta description present"
+          else
+            echo "❌ Meta description MISSING"
+            exit 1
+          fi
+
+      - name: Check OG tags
+        run: |
+          PAGE=$(curl -s -L https://aiagentsvault.tech)
+          if echo "$PAGE" | grep -q 'og:title'; then
+            echo "✅ OG title present"
+          else
+            echo "❌ OG title MISSING"
+          fi
+          if echo "$PAGE" | grep -q 'og:description'; then
+            echo "✅ OG description present"
+          else
+            echo "❌ OG description MISSING"
+          fi
+
+      - name: Check canonical URL
+        run: |
+          PAGE=$(curl -s -L https://aiagentsvault.tech)
+          if echo "$PAGE" | grep -q 'rel="canonical"'; then
+            echo "✅ Canonical URL present"
+          else
+            echo "❌ Canonical URL MISSING"
+          fi
+
+      - name: Check robots.txt
+        run: |
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://aiagentsvault.tech/robots.txt)
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ robots.txt accessible"
+          else
+            echo "❌ robots.txt not accessible (status: $STATUS)"
+            exit 1
+          fi
+
+      - name: Check sitemap in robots.txt
+        run: |
+          ROBOTS=$(curl -s -L https://aiagentsvault.tech/robots.txt)
+          if echo "$ROBOTS" | grep -q "sitemap"; then
+            echo "✅ Sitemap referenced in robots.txt"
+          else
+            echo "❌ Sitemap NOT referenced in robots.txt"
+          fi
+
+      - name: All checks passed
+        run: echo "🎉 SEO validation complete for aiagentsvault.tech"

@@ -1,0 +1,46 @@
+name: 24/7 Uptime Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Every 30 minutes
+  workflow_dispatch:
+
+jobs:
+  check-uptime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check homepage
+        run: |
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://aiagentsvault.tech)
+          echo "Homepage status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ ALERT: Homepage returned $STATUS"
+            exit 1
+          fi
+          echo "✅ Homepage is live"
+
+      - name: Check marketplace page
+        run: |
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://aiagentsvault.tech/marketplace)
+          echo "Marketplace status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ ALERT: Marketplace returned $STATUS"
+            exit 1
+          fi
+          echo "✅ Marketplace is live"
+
+      - name: Check Bella agent page
+        run: |
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://aiagentsvault.tech/marketplace/a1)
+          echo "Bella page status: $STATUS"
+          echo "✅ Agent pages checked"
+
+      - name: Check sitemap
+        run: |
+          STATUS=$(curl -s -L -o /dev/null -w "%{http_code}" https://aiagentsvault.tech/sitemap.xml)
+          echo "Sitemap status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ ALERT: Sitemap returned $STATUS"
+            exit 1
+          fi
+          echo "✅ Sitemap is accessible"

@@ -1,0 +1,101 @@
+name: Weekly SEO Report
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 8am UTC
+  workflow_dispatch:       # Also allows manual trigger
+
+jobs:
+  seo-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Check all key pages are live
+        run: |
+          echo "## 🔍 Weekly SEO Health Report — $(date '+%Y-%m-%d')" >> report.md
+          echo "" >> report.md
+          echo "### Page Status" >> report.md
+
+          pages=(
+            "https://aiagentsvault.tech"
+            "https://aiagentsvault.tech/marketplace"
+            "https://aiagentsvault.tech/marketplace/a1"
+            "https://aiagentsvault.tech/marketplace/a2"
+            "https://aiagentsvault.tech/marketplace/a3"
+            "https://aiagentsvault.tech/sitemap.xml"
+          )
+
+          for page in "${pages[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$page")
+            SPEED=$(curl -s -o /dev/null -w "%{time_total}" "$page")
+            if [ "$STATUS" = "200" ]; then
+              echo "- ✅ $page — $STATUS (${SPEED}s)" >> report.md
+            else
+              echo "- ❌ $page — $STATUS (NEEDS FIX)" >> report.md
+            fi
+          done
+
+      - name: Check sitemap URL count
+        run: |
+          echo "" >> report.md
+          echo "### Sitemap" >> report.md
+          SITEMAP=$(curl -s https://aiagentsvault.tech/sitemap.xml)
+          COUNT=$(echo "$SITEMAP" | grep -c "<url>" || true)
+          echo "- URLs in sitemap: $COUNT" >> report.md
+          echo "- Sitemap URL: https://aiagentsvault.tech/sitemap.xml" >> report.md
+
+      - name: Check schema markup is present
+        run: |
+          echo "" >> report.md
+          echo "### Schema Markup Check" >> report.md
+          PAGE=$(curl -s https://aiagentsvault.tech)
+          if echo "$PAGE" | grep -q "application/ld+json"; then
+            echo "- ✅ JSON-LD schema found on homepage" >> report.md
+          else
+            echo "- ❌ JSON-LD schema MISSING from homepage" >> report.md
+          fi
+          if echo "$PAGE" | grep -q "google-site-verification"; then
+            echo "- ✅ Google verification tag present" >> report.md
+          else
+            echo "- ❌ Google verification tag MISSING" >> report.md
+          fi
+          if echo "$PAGE" | grep -q "FAQ"; then
+            echo "- ✅ FAQ section present on homepage" >> report.md
+          else
+            echo "- ❌ FAQ section MISSING from homepage" >> report.md
+          fi
+
+      - name: Add action items
+        run: |
+          echo "" >> report.md
+          echo "### This Week's Checklist" >> report.md
+          echo "- [ ] Check Google Search Console for new impressions" >> report.md
+          echo "- [ ] Check if any new keywords are ranking" >> report.md
+          echo "- [ ] Submit to 1 new directory (see seo/backlink-prospects.md)" >> report.md
+          echo "- [ ] Search ChatGPT: 'best AI voice agent for restaurants' — are we cited?" >> report.md
+          echo "- [ ] Search Perplexity: 'AI receptionist small business' — are we cited?" >> report.md
+          echo "" >> report.md
+          echo "---" >> report.md
+          echo "*Generated automatically by GitHub Actions every Monday 8am*" >> report.md
+
+      - name: Save report to seo folder
+        run: |
+          DATE=$(date '+%Y-%m-%d')
+          cp report.md "seo/weekly-report-$DATE.md"
+          echo "Report saved as seo/weekly-report-$DATE.md"
+
+      - name: Commit report to repo
+        run: |
+          git config user.name "SEO Bot"
+          git config user.email "seo-bot@aiagentsvault.tech"
+          DATE=$(date '+%Y-%m-%d')
+          git add "seo/weekly-report-$DATE.md"
+          git diff --staged --quiet || git commit -m "Auto: Weekly SEO report $DATE"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print report
+        run: cat report.md
