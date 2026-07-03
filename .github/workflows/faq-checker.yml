@@ -1,0 +1,25 @@
+name: Daily FAQ Check
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  faq-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check FAQ sections exist on all agent pages
+        run: |
+          agents=(a1 a2 a3 a4 a9 a10 a11 a12 a13)
+          FAIL=0
+          for slug in "${agents[@]}"; do
+            PAGE=$(curl -s "https://aiagentsvault.tech/marketplace/$slug")
+            if echo "$PAGE" | grep -qi "frequently asked\|faq"; then
+              echo "✅ /marketplace/$slug — FAQ present"
+            else
+              echo "❌ /marketplace/$slug — FAQ MISSING"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
