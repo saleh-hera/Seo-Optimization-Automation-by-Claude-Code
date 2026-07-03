@@ -1,0 +1,25 @@
+name: Daily Schema Check
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  schema-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check JSON-LD on all agent pages
+        run: |
+          agents=(a1 a2 a3 a4 a9 a10 a11 a12 a13)
+          FAIL=0
+          for slug in "${agents[@]}"; do
+            PAGE=$(curl -s "https://aiagentsvault.tech/marketplace/$slug")
+            if echo "$PAGE" | grep -q "application/ld+json"; then
+              echo "✅ /marketplace/$slug — schema OK"
+            else
+              echo "❌ /marketplace/$slug — JSON-LD MISSING"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
