@@ -1,0 +1,27 @@
+name: Daily Sitemap Ping
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-sitemap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Google
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://www.google.com/ping?sitemap=https://aiagentsvault.tech/sitemap.xml")
+          echo "Google ping: $STATUS"
+
+      - name: Ping Bing
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://www.bing.com/ping?sitemap=https://aiagentsvault.tech/sitemap.xml")
+          echo "Bing ping: $STATUS"
+
+      - name: Verify sitemap is accessible
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://aiagentsvault.tech/sitemap.xml")
+          COUNT=$(curl -s https://aiagentsvault.tech/sitemap.xml | grep -c "<url>" || true)
+          echo "Sitemap status: $STATUS"
+          echo "URLs in sitemap: $COUNT"
