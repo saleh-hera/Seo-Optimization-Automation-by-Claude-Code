@@ -1,0 +1,55 @@
+name: Daily AEO Content Check
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  aeo-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check homepage covers AI search phrases
+        run: |
+          PAGE=$(curl -s https://aiagentsvault.tech)
+          keywords=(
+            "AI voice agent"
+            "AI receptionist"
+            "7-day free trial"
+            "24/7"
+            "restaurant"
+            "dental"
+            "real estate"
+            "law firm"
+          )
+          FAIL=0
+          for kw in "${keywords[@]}"; do
+            if echo "$PAGE" | grep -qi "$kw"; then
+              echo "✅ Homepage contains: '$kw'"
+            else
+              echo "❌ MISSING from homepage: '$kw'"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
+
+      - name: Check agent pages cover their primary keywords
+        run: |
+          declare -A CHECKS
+          CHECKS["a1"]="restaurant reservation"
+          CHECKS["a2"]="ecommerce order"
+          CHECKS["a11"]="dental appointment"
+          CHECKS["a10"]="law firm intake"
+          CHECKS["a9"]="real estate"
+          CHECKS["a12"]="car dealership"
+          CHECKS["a13"]="home services"
+
+          for slug in "${!CHECKS[@]}"; do
+            keyword="${CHECKS[$slug]}"
+            PAGE=$(curl -s "https://aiagentsvault.tech/marketplace/$slug")
+            if echo "$PAGE" | grep -qi "$keyword"; then
+              echo "✅ /marketplace/$slug — '$keyword' found"
+            else
+              echo "⚠️ /marketplace/$slug — '$keyword' may be missing"
+            fi
+          done
