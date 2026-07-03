@@ -1,0 +1,44 @@
+name: Daily Robots and Meta Check
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  robots-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check robots.txt is accessible and not blocking
+        run: |
+          ROBOTS=$(curl -s https://aiagentsvault.tech/robots.txt)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://aiagentsvault.tech/robots.txt)
+          echo "robots.txt status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ robots.txt accessible"
+          else
+            echo "❌ robots.txt returned $STATUS"
+            exit 1
+          fi
+          if echo "$ROBOTS" | grep -q "Disallow: /$"; then
+            echo "❌ CRITICAL: robots.txt is blocking all crawlers!"
+            exit 1
+          else
+            echo "✅ robots.txt not blocking crawlers"
+          fi
+          echo "$ROBOTS"
+
+      - name: Check meta robots on key pages
+        run: |
+          pages=(
+            "https://aiagentsvault.tech"
+            "https://aiagentsvault.tech/marketplace"
+          )
+          for page in "${pages[@]}"; do
+            PAGE=$(curl -s "$page")
+            if echo "$PAGE" | grep -qi "noindex"; then
+              echo "❌ WARNING: noindex found on $page — Google won't index this!"
+            else
+              echo "✅ $page — indexable (no noindex found)"
+            fi
+          done
