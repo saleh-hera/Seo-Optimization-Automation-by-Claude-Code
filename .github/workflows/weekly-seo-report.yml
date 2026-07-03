@@ -2,8 +2,11 @@ name: Weekly SEO Report
 
 on:
   schedule:
-    - cron: '0 8 * * 1'  # Every Monday at 8am UTC
-  workflow_dispatch:       # Also allows manual trigger
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   seo-report:
@@ -12,11 +15,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Check all key pages are live
+      - name: Check all 9 agent pages are live
         run: |
           echo "## 🔍 Weekly SEO Health Report — $(date '+%Y-%m-%d')" >> report.md
           echo "" >> report.md
-          echo "### Page Status" >> report.md
+          echo "### Page Status (All 9 Agents)" >> report.md
 
           pages=(
             "https://aiagentsvault.tech"
@@ -24,6 +27,12 @@ jobs:
             "https://aiagentsvault.tech/marketplace/a1"
             "https://aiagentsvault.tech/marketplace/a2"
             "https://aiagentsvault.tech/marketplace/a3"
+            "https://aiagentsvault.tech/marketplace/a4"
+            "https://aiagentsvault.tech/marketplace/a9"
+            "https://aiagentsvault.tech/marketplace/a10"
+            "https://aiagentsvault.tech/marketplace/a11"
+            "https://aiagentsvault.tech/marketplace/a12"
+            "https://aiagentsvault.tech/marketplace/a13"
             "https://aiagentsvault.tech/sitemap.xml"
           )
 
@@ -44,15 +53,46 @@ jobs:
           SITEMAP=$(curl -s https://aiagentsvault.tech/sitemap.xml)
           COUNT=$(echo "$SITEMAP" | grep -c "<url>" || true)
           echo "- URLs in sitemap: $COUNT" >> report.md
-          echo "- Sitemap URL: https://aiagentsvault.tech/sitemap.xml" >> report.md
+          echo "- Target: 11+ URLs (homepage + marketplace + 9 agents)" >> report.md
+          if [ "$COUNT" -ge 11 ]; then
+            echo "- ✅ Sitemap looks complete" >> report.md
+          else
+            echo "- ⚠️ Sitemap may be missing agent pages" >> report.md
+          fi
 
-      - name: Check schema markup is present
+      - name: Check schema markup on all agent pages
         run: |
           echo "" >> report.md
-          echo "### Schema Markup Check" >> report.md
+          echo "### Schema Markup" >> report.md
+          for slug in a1 a2 a3 a4 a9 a10 a11 a12 a13; do
+            PAGE=$(curl -s "https://aiagentsvault.tech/marketplace/$slug")
+            if echo "$PAGE" | grep -q "application/ld+json"; then
+              echo "- ✅ /marketplace/$slug — JSON-LD found" >> report.md
+            else
+              echo "- ❌ /marketplace/$slug — JSON-LD MISSING" >> report.md
+            fi
+          done
+
+      - name: Check FAQ sections on agent pages
+        run: |
+          echo "" >> report.md
+          echo "### FAQ Sections" >> report.md
+          for slug in a1 a2 a3 a4 a9 a10 a11 a12 a13; do
+            PAGE=$(curl -s "https://aiagentsvault.tech/marketplace/$slug")
+            if echo "$PAGE" | grep -qi "faq\|frequently asked"; then
+              echo "- ✅ /marketplace/$slug — FAQ found" >> report.md
+            else
+              echo "- ❌ /marketplace/$slug — FAQ MISSING" >> report.md
+            fi
+          done
+
+      - name: Check homepage trust signals
+        run: |
+          echo "" >> report.md
+          echo "### Homepage Trust Signals" >> report.md
           PAGE=$(curl -s https://aiagentsvault.tech)
           if echo "$PAGE" | grep -q "application/ld+json"; then
-            echo "- ✅ JSON-LD schema found on homepage" >> report.md
+            echo "- ✅ JSON-LD schema on homepage" >> report.md
           else
             echo "- ❌ JSON-LD schema MISSING from homepage" >> report.md
           fi
@@ -61,30 +101,41 @@ jobs:
           else
             echo "- ❌ Google verification tag MISSING" >> report.md
           fi
-          if echo "$PAGE" | grep -q "FAQ"; then
-            echo "- ✅ FAQ section present on homepage" >> report.md
+          if echo "$PAGE" | grep -q "FAQ\|faq"; then
+            echo "- ✅ FAQ section on homepage" >> report.md
           else
             echo "- ❌ FAQ section MISSING from homepage" >> report.md
           fi
+          if echo "$PAGE" | grep -q "179\|299\|399"; then
+            echo "- ✅ Pricing visible on homepage" >> report.md
+          else
+            echo "- ❌ Pricing NOT visible on homepage" >> report.md
+          fi
 
-      - name: Add action items
+      - name: AEO / GEO checklist
         run: |
           echo "" >> report.md
-          echo "### This Week's Checklist" >> report.md
-          echo "- [ ] Check Google Search Console for new impressions" >> report.md
-          echo "- [ ] Check if any new keywords are ranking" >> report.md
+          echo "### AEO / GEO Weekly Checklist" >> report.md
+          echo "- [ ] Search ChatGPT: 'best AI receptionist for restaurants' — are we cited?" >> report.md
+          echo "- [ ] Search Perplexity: 'AI voice agent for dental offices' — are we cited?" >> report.md
+          echo "- [ ] Search Claude: 'affordable AI phone agent for small business' — are we cited?" >> report.md
+          echo "- [ ] Search Google: 'AI Agents Vault' — what position?" >> report.md
+          echo "- [ ] Check Google Search Console for new impressions this week" >> report.md
           echo "- [ ] Submit to 1 new directory (see seo/backlink-prospects.md)" >> report.md
-          echo "- [ ] Search ChatGPT: 'best AI voice agent for restaurants' — are we cited?" >> report.md
-          echo "- [ ] Search Perplexity: 'AI receptionist small business' — are we cited?" >> report.md
+          echo "" >> report.md
+          echo "### Agent Pages to Prioritize This Week" >> report.md
+          echo "- DentaDesk (/marketplace/a11) — highest-value dental market" >> report.md
+          echo "- LexAssist (/marketplace/a10) — highest price point \$399/mo" >> report.md
+          echo "- HomeConnect (/marketplace/a9) — large real estate market" >> report.md
           echo "" >> report.md
           echo "---" >> report.md
-          echo "*Generated automatically by GitHub Actions every Monday 8am*" >> report.md
+          echo "*Generated automatically every Monday 8am UTC by GitHub Actions*" >> report.md
 
       - name: Save report to seo folder
         run: |
           DATE=$(date '+%Y-%m-%d')
+          mkdir -p seo
           cp report.md "seo/weekly-report-$DATE.md"
-          echo "Report saved as seo/weekly-report-$DATE.md"
 
       - name: Commit report to repo
         run: |
