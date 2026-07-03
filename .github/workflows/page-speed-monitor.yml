@@ -1,0 +1,30 @@
+name: Daily Page Speed Monitor
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  speed-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check load times on key pages
+        run: |
+          pages=(
+            "https://aiagentsvault.tech"
+            "https://aiagentsvault.tech/marketplace"
+            "https://aiagentsvault.tech/marketplace/a1"
+            "https://aiagentsvault.tech/marketplace/a11"
+            "https://aiagentsvault.tech/marketplace/a10"
+          )
+          FAIL=0
+          for page in "${pages[@]}"; do
+            SPEED=$(curl -s -o /dev/null -w "%{time_total}" "$page")
+            echo "⏱️ $page — ${SPEED}s"
+            if (( $(echo "$SPEED > 5.0" | bc -l) )); then
+              echo "⚠️ SLOW: $page took ${SPEED}s (target < 3s)"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
